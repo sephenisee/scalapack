@@ -15,4 +15,7 @@ PBLAS/TIMING/PB_Cwarn.c
 BLACS/TESTING/xCbtest
 BLACS/TESTING/xFbtest
 SLmake.inc
-
+out
+.vs
+BLACS/INSTALL/.ninja*
+BLACS/INSTALL/build.ninja

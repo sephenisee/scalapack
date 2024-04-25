@@ -146,7 +146,7 @@ ADD_DEFINITIONS( "-D${CDEFS}")
 # --------------------------------------------------
 # ScaLAPACK needs BLAS and LAPACK
 
-option(USE_OPTIMIZED_LAPACK_BLAS "Whether or not to search for optimized LAPACK and BLAS libraries on your machine (if not found, Reference LAPACK and BLAS will be downloaded and installed)" ON)
+option(USE_OPTIMIZED_LAPACK_BLAS "Whether or not to search for optimized LAPACK and BLAS libraries on your machine (if not found, Reference LAPACK and BLAS will be downloaded and installed)" OFF)
 
 message(STATUS "CHECKING BLAS AND LAPACK LIBRARIES")
 
@@ -159,6 +159,24 @@ IF(LAPACK_LIBRARIES)
   message(STATUS "--> LAPACK routine dgesv is found: ${LAPACK_FOUND}.")
 ENDIF()
 
+# Lapack
+option(BUILD_SINGLE "Build single precision real" ON)
+option(BUILD_DOUBLE "Build double precision real" ON)
+option(BUILD_COMPLEX "Build single precision complex" ON)
+option(BUILD_COMPLEX16 "Build double precision complex" ON)
+
+set(lapack_cmake_args
+-DCMAKE_INSTALL_PREFIX:PATH=${SCALAPACK_BINARY_DIR}
+-DCMAKE_PREFIX_PATH:PATH=${CMAKE_INSTALL_PREFIX}
+-DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
+-DCMAKE_BUILD_TYPE=Release
+-DBUILD_TESTING:BOOL=false
+-DBUILD_SINGLE:BOOL=${BUILD_SINGLE}
+-DBUILD_DOUBLE:BOOL=${BUILD_DOUBLE}
+-DBUILD_COMPLEX:BOOL=${BUILD_COMPLEX}
+-DBUILD_COMPLEX16:BOOL=${BUILD_COMPLEX16}
+)
+
 if(LAPACK_FOUND)
       message(STATUS "--> LAPACK supplied by user is WORKING, will use ${LAPACK_LIBRARIES}.")
 else(LAPACK_FOUND)
@@ -168,13 +186,6 @@ else(LAPACK_FOUND)
    ENDIF(USE_OPTIMIZED_LAPACK_BLAS)
    if(NOT LAPACK_FOUND)
       message(STATUS "--> LAPACK and BLAS were not found. Reference LAPACK and BLAS will be downloaded and installed")
-      include(ExternalProject)
-      ExternalProject_Add(
-        lapack
-        URL http://www.netlib.org/lapack/lapack.tgz
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${SCALAPACK_BINARY_DIR}
-        PREFIX ${SCALAPACK_BINARY_DIR}/dependencies
-      )
       if (NOT MSVC)
          SET(LAPACK_LIBRARIES ${SCALAPACK_BINARY_DIR}/lib/liblapack.a CACHE STRING "LAPACK library" FORCE)
          SET(BLAS_LIBRARIES ${SCALAPACK_BINARY_DIR}/lib/libblas.a CACHE STRING "BLAS library" FORCE)
@@ -182,6 +193,25 @@ else(LAPACK_FOUND)
          SET(LAPACK_LIBRARIES ${SCALAPACK_BINARY_DIR}/lib/liblapack.lib CACHE STRING "LAPACK library" FORCE)
          SET(BLAS_LIBRARIES ${SCALAPACK_BINARY_DIR}/lib/libblas.lib CACHE STRING "BLAS library" FORCE)
       endif ()
+      include(ExternalProject)
+      ExternalProject_Add(
+        lapack
+        GIT_REPOSITORY  "https://github.com/Reference-LAPACK/lapack.git"
+        GIT_SHALLOW true
+        GIT_PROGRESS true
+        CMAKE_ARGS ${lapack_cmake_args}
+        PREFIX ${SCALAPACK_BINARY_DIR}/dependencies
+        CONFIGURE_HANDLED_BY_BUILD true
+        BUILD_BYPRODUCTS ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES}
+        USES_TERMINAL_DOWNLOAD true
+        USES_TERMINAL_UPDATE true
+        USES_TERMINAL_PATCH true
+        USES_TERMINAL_CONFIGURE true
+        USES_TERMINAL_BUILD true
+        USES_TERMINAL_INSTALL true
+        USES_TERMINAL_TEST true
+      )
+
    ENDIF()
 ENDIF()
 
@@ -238,6 +268,8 @@ add_subdirectory(SRC)
 append_subdir_files(src "SRC")
 append_subdir_files(src-C "SRC")
 
+add_library(SCALAPACK::SCALAPACK INTERFACE IMPORTED GLOBAL)
+
 if (NOT MSVC)
    add_library(scalapack ${blacs} ${tools} ${tools-C} ${extra_lapack} ${pblas} ${pblas-F} ${ptzblas} ${ptools} ${pbblas} ${redist} ${src} ${src-C})
    set_target_properties(scalapack PROPERTIES
@@ -245,6 +277,7 @@ if (NOT MSVC)
     SOVERSION ${SCALAPACK_VERSION_MAJOR}.${SCALAPACK_VERSION_MINOR})
    target_link_libraries( scalapack ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} MPI::MPI_C)
    scalapack_install_library(scalapack)
+   target_link_libraries(SCALAPACK::SCALAPACK INTERFACE scalapack)
 else () # Need to separate Fortran and C Code
    OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON )
    add_library(scalapack ${blacs} ${tools-C} ${pblas} ${ptools} ${redist} ${src-C})
@@ -259,6 +292,7 @@ else () # Need to separate Fortran and C Code
    target_link_libraries( scalapack-F ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} MPI::MPI_Fortran)
    scalapack_install_library(scalapack)
    scalapack_install_library(scalapack-F)
+   target_link_libraries(SCALAPACK::SCALAPACK INTERFACE scalapack scalapack-F)
 endif ()
 
 if(TARGET lapack)
