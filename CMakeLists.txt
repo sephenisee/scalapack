@@ -18,6 +18,11 @@ if (UNIX)
    endif ()
 endif ()
 
+if (WIN32)
+  set(CMAKE_OBJECT_PATH_MAX 300)
+  set(CMAKE_OBJECT_PATH_MAX PARENT_SCOPE)
+endif ()
+
 #
 #   MPI
 #
