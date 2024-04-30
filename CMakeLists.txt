@@ -20,7 +20,6 @@ endif ()
 
 if (WIN32)
   set(CMAKE_OBJECT_PATH_MAX 300)
-  set(CMAKE_OBJECT_PATH_MAX PARENT_SCOPE)
 endif ()
 
 #
@@ -273,7 +272,7 @@ add_subdirectory(SRC)
 append_subdir_files(src "SRC")
 append_subdir_files(src-C "SRC")
 
-add_library(SCALAPACK::SCALAPACK INTERFACE IMPORTED GLOBAL)
+add_library(SCALAPACK INTERFACE IMPORTED GLOBAL)
 
 if (NOT MSVC)
    add_library(scalapack ${blacs} ${tools} ${tools-C} ${extra_lapack} ${pblas} ${pblas-F} ${ptzblas} ${ptools} ${pbblas} ${redist} ${src} ${src-C})
@@ -282,7 +281,7 @@ if (NOT MSVC)
     SOVERSION ${SCALAPACK_VERSION_MAJOR}.${SCALAPACK_VERSION_MINOR})
    target_link_libraries( scalapack ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} MPI::MPI_C)
    scalapack_install_library(scalapack)
-   target_link_libraries(SCALAPACK::SCALAPACK INTERFACE scalapack)
+   target_link_libraries(SCALAPACK INTERFACE scalapack)
 else () # Need to separate Fortran and C Code
    OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON )
    add_library(scalapack ${blacs} ${tools-C} ${pblas} ${ptools} ${redist} ${src-C})
@@ -297,7 +296,7 @@ else () # Need to separate Fortran and C Code
    target_link_libraries( scalapack-F ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} MPI::MPI_Fortran)
    scalapack_install_library(scalapack)
    scalapack_install_library(scalapack-F)
-   target_link_libraries(SCALAPACK::SCALAPACK INTERFACE scalapack scalapack-F)
+   target_link_libraries(SCALAPACK INTERFACE scalapack scalapack-F)
 endif ()
 
 if(TARGET lapack)
